@@ -12,3 +12,4 @@ uvicorn
 jupyter
 ipykernel
 requests
+PyMuPDF
