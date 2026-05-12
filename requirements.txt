@@ -14,3 +14,4 @@ ipykernel
 requests
 PyMuPDF
 groq
+reportlab
