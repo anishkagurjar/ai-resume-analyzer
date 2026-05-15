@@ -12,6 +12,8 @@ def clean(text):
     if not text:
         return ''
     text = str(text)
+    # Remove non-ASCII characters
+    text = re.sub(r'[^\x00-\x7F]+', '', text)
     text = text.replace('&', '&amp;')
     text = text.replace('<', '&lt;')
     text = text.replace('>', '&gt;')
@@ -19,37 +21,31 @@ def clean(text):
 
 
 def extract_name(resume_text):
-    # Common name patterns in resumes
     lines = [l.strip() for l in resume_text.split('\n') if l.strip()]
 
-    # Try to find name - usually all caps or title case, no numbers
-    for line in lines:
+    # Search from bottom
+    for line in reversed(lines[-15:]):
         line = line.strip()
-        if not line:
-            continue
-        if '@' in line or 'http' in line:
+        if not line or '@' in line or 'http' in line:
             continue
         if re.search(r'\d{4,}', line):
             continue
-        if len(line.split()) > 5:
-            continue
+        # Remove ALL special characters including unicode dashes and lines
         cleaned = re.sub(r'[^a-zA-Z\s]', '', line).strip()
-        cleaned = ' '.join(cleaned.split())
-        if len(cleaned) > 3 and cleaned.replace(' ', '').isalpha():
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        if 3 < len(cleaned) < 40 and len(cleaned.split()) <= 4:
             return cleaned
 
-    # Try from end of document (some PDFs have name at bottom)
-    for line in reversed(lines):
+    # Search from top
+    for line in lines[:8]:
         line = line.strip()
-        if not line:
-            continue
-        if '@' in line or 'http' in line:
+        if not line or '@' in line or 'http' in line:
             continue
         if re.search(r'\d{4,}', line):
             continue
         cleaned = re.sub(r'[^a-zA-Z\s]', '', line).strip()
-        cleaned = ' '.join(cleaned.split())
-        if len(cleaned) > 3 and len(cleaned.split()) <= 4:
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        if 3 < len(cleaned) < 40 and len(cleaned.split()) <= 4:
             return cleaned
 
     return 'Your Name'
@@ -59,18 +55,14 @@ def extract_resume_data(resume_text, ai_result):
     lines = [l.strip() for l in resume_text.split('\n') if l.strip()]
     text_lower = resume_text.lower()
 
-    # Name
     name = extract_name(resume_text)
 
-    # Email
     email_match = re.search(r'[\w.\-]+@[\w.\-]+\.\w+', resume_text)
     email = email_match.group() if email_match else ''
 
-    # Phone
     phone_match = re.search(r'[\+]?[\d][\d\s\-().]{8,15}', resume_text)
     phone = phone_match.group().strip() if phone_match else ''
 
-    # Location
     location_match = re.search(
         r'([A-Z][a-z]+),?\s*(M\.?P\.?|Maharashtra|Delhi|Karnataka|Rajasthan|Gujarat|India)',
         resume_text
@@ -95,7 +87,6 @@ def extract_resume_data(resume_text, ai_result):
         section_lines = section.split('\n')
         return '\n'.join(section_lines[1:]).strip()
 
-    # Summary / Objective
     summary = extract_section(
         resume_text,
         ['career objective', 'objective', 'summary', 'profile', 'about me'],
@@ -103,7 +94,6 @@ def extract_resume_data(resume_text, ai_result):
          'core competencies', 'competencies']
     )
 
-    # Education
     education = extract_section(
         resume_text,
         ['education', 'academic record', 'qualification', 'academic background'],
@@ -111,7 +101,6 @@ def extract_resume_data(resume_text, ai_result):
          'core competencies', 'internship', 'training']
     )
 
-    # Experience
     experience = extract_section(
         resume_text,
         ['experience', 'work experience', 'internship', 'training'],
@@ -119,7 +108,6 @@ def extract_resume_data(resume_text, ai_result):
          'core competencies', 'strength', 'personal']
     )
 
-    # Skills
     skills = extract_section(
         resume_text,
         ['skills', 'technical skills', 'key skills',
@@ -128,7 +116,6 @@ def extract_resume_data(resume_text, ai_result):
          'hobby', 'strength', 'personal', 'declaration']
     )
 
-    # Projects
     projects = extract_section(
         resume_text,
         ['project', 'projects'],
@@ -136,14 +123,12 @@ def extract_resume_data(resume_text, ai_result):
          'reference', 'strength', 'personal', 'declaration']
     )
 
-    # Achievements
     achievements = extract_section(
         resume_text,
         ['achievement', 'accomplishment', 'community', 'extracurricular'],
         ['strength', 'personal', 'declaration', 'reference', 'language']
     )
 
-    # Combine experience + projects
     exp_combined = ''
     if experience:
         exp_combined += experience
@@ -177,14 +162,14 @@ def generate_modern_template(resume_data):
     name_style = ParagraphStyle(
         'Name', fontSize=24, fontName='Helvetica-Bold',
         textColor=colors.HexColor('#2C3E50'),
-        spaceAfter=4, alignment=TA_CENTER
+        spaceAfter=2, alignment=TA_CENTER
     )
     story.append(Paragraph(clean(resume_data.get('name', 'Your Name')), name_style))
 
     contact_style = ParagraphStyle(
         'Contact', fontSize=9, fontName='Helvetica',
         textColor=colors.HexColor('#7F8C8D'),
-        spaceAfter=10, alignment=TA_CENTER
+        spaceAfter=8, alignment=TA_CENTER
     )
     contact_parts = []
     if resume_data.get('email'): contact_parts.append(resume_data['email'])
@@ -192,10 +177,8 @@ def generate_modern_template(resume_data):
     if resume_data.get('location'): contact_parts.append(resume_data['location'])
     story.append(Paragraph(' | '.join(contact_parts), contact_style))
 
-    story.append(HRFlowable(
-        width="100%", thickness=2,
-        color=colors.HexColor('#3498DB')
-    ))
+    # Line only after contact
+    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#3498DB')))
     story.append(Spacer(1, 10))
 
     section_style = ParagraphStyle(
@@ -220,10 +203,8 @@ def generate_modern_template(resume_data):
         content = resume_data.get(key, '')
         if content:
             story.append(Paragraph(title, section_style))
-            story.append(HRFlowable(
-                width="100%", thickness=0.5,
-                color=colors.HexColor('#BDC3C7')
-            ))
+            story.append(HRFlowable(width="100%", thickness=0.5,
+                                    color=colors.HexColor('#BDC3C7')))
             story.append(Spacer(1, 4))
             for line in content.split('\n'):
                 if line.strip():
@@ -250,22 +231,21 @@ def generate_creative_template(resume_data):
         spaceAfter=2, alignment=TA_LEFT
     )
     story.append(Paragraph(clean(resume_data.get('name', 'Your Name')), name_style))
-
-    story.append(HRFlowable(
-        width="100%", thickness=3,
-        color=colors.HexColor('#6C3483')
-    ))
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 4))
 
     contact_style = ParagraphStyle(
         'Contact', fontSize=9, fontName='Helvetica',
-        textColor=colors.HexColor('#6C3483'), spaceAfter=12
+        textColor=colors.HexColor('#6C3483'), spaceAfter=6
     )
     contact_parts = []
     if resume_data.get('email'): contact_parts.append(resume_data['email'])
     if resume_data.get('phone'): contact_parts.append(resume_data['phone'])
     if resume_data.get('location'): contact_parts.append(resume_data['location'])
     story.append(Paragraph(' | '.join(contact_parts), contact_style))
+
+    # Line only after contact
+    story.append(HRFlowable(width="100%", thickness=3, color=colors.HexColor('#6C3483')))
+    story.append(Spacer(1, 10))
 
     section_style = ParagraphStyle(
         'Section', fontSize=10, fontName='Helvetica-Bold',
@@ -314,14 +294,14 @@ def generate_minimal_template(resume_data):
     name_style = ParagraphStyle(
         'Name', fontSize=22, fontName='Helvetica-Bold',
         textColor=colors.HexColor('#1A1A1A'),
-        spaceAfter=4, alignment=TA_CENTER
+        spaceAfter=2, alignment=TA_CENTER
     )
     story.append(Paragraph(clean(resume_data.get('name', 'Your Name')), name_style))
 
     contact_style = ParagraphStyle(
         'Contact', fontSize=9, fontName='Helvetica',
         textColor=colors.HexColor('#666666'),
-        spaceAfter=12, alignment=TA_CENTER
+        spaceAfter=8, alignment=TA_CENTER
     )
     contact_parts = []
     if resume_data.get('email'): contact_parts.append(resume_data['email'])
@@ -329,10 +309,8 @@ def generate_minimal_template(resume_data):
     if resume_data.get('location'): contact_parts.append(resume_data['location'])
     story.append(Paragraph(' | '.join(contact_parts), contact_style))
 
-    story.append(HRFlowable(
-        width="100%", thickness=1,
-        color=colors.HexColor('#1A1A1A')
-    ))
+    # Line only after contact
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#1A1A1A')))
     story.append(Spacer(1, 10))
 
     section_style = ParagraphStyle(
@@ -357,10 +335,8 @@ def generate_minimal_template(resume_data):
         content = resume_data.get(key, '')
         if content:
             story.append(Paragraph(title, section_style))
-            story.append(HRFlowable(
-                width="100%", thickness=0.3,
-                color=colors.HexColor('#999999')
-            ))
+            story.append(HRFlowable(width="100%", thickness=0.3,
+                                    color=colors.HexColor('#999999')))
             story.append(Spacer(1, 4))
             for line in content.split('\n'):
                 if line.strip():
