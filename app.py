@@ -1,3 +1,4 @@
+
 import streamlit as st
 import os
 import re
@@ -121,57 +122,62 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ─── AI Settings on Main Page ─────────────────────────────────────────────────
 if 'mode' not in st.session_state:
     st.session_state['mode'] = None
 
 if st.session_state['mode'] is None:
 
-    # Model + API Key
-    st.markdown("""
-        <div class='api-box'>
-            <h3 style='color:#667eea; margin:0 0 1rem 0;'>⚙️ AI Settings</h3>
-        </div>
-    """, unsafe_allow_html=True)
+    # ─── AI Settings Toggle ───────────────────────────────────────────────────
+    show_settings = st.toggle("⚙️ AI Settings", value=False)
 
-    col1, col2 = st.columns(2)
+    if show_settings:
+        st.markdown("""
+            <div class='api-box'>
+                <h3 style='color:#667eea; margin:0 0 1rem 0;'>⚙️ Configure AI</h3>
+            </div>
+        """, unsafe_allow_html=True)
 
-    with col1:
-        model_choice = st.radio(
-            "🤖 Select AI Model:",
-            ["Ollama (Local)", "Groq (Cloud)"],
-            horizontal=True
-        )
+        col1, col2 = st.columns(2)
 
-    with col2:
-        api_key = None
-        if model_choice == "Groq (Cloud)":
-            api_key = st.text_input(
-                "🔑 Enter Groq API Key:",
-                type="password",
-                placeholder="gsk_xxxxxxxxxxxxxxxx"
+        with col1:
+            model_choice = st.radio(
+                "🤖 Select AI Model:",
+                ["Ollama (Local)", "Groq (Cloud)"],
+                horizontal=True
             )
-            if not api_key:
-                api_key = os.getenv("GROQ_API_KEY")
-            if api_key:
-                st.success("✅ API Key Ready!")
-            else:
-                st.markdown("""
-                    <small>Get free key at
-                    <a href='https://console.groq.com' target='_blank'>console.groq.com</a>
-                    </small>
-                """, unsafe_allow_html=True)
-        else:
-            st.info("⚡ Ollama runs locally — no API key needed!")
-            api_key = None
 
-    # Save to session
-    st.session_state['model_choice'] = model_choice
-    st.session_state['api_key'] = api_key
+        with col2:
+            api_key = None
+            if model_choice == "Groq (Cloud)":
+                api_key = st.text_input(
+                    "🔑 Enter Groq API Key:",
+                    type="password",
+                    placeholder="gsk_xxxxxxxxxxxxxxxx"
+                )
+                if not api_key:
+                    api_key = os.getenv("GROQ_API_KEY")
+                if api_key:
+                    st.success("✅ API Key Ready!")
+                else:
+                    st.markdown("""
+                        <small>Get free key at
+                        <a href='https://console.groq.com' target='_blank'>
+                        console.groq.com</a></small>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("⚡ Ollama runs locally — no API key needed!")
+                api_key = None
+
+        st.session_state['model_choice'] = model_choice
+        st.session_state['api_key'] = api_key
+
+    else:
+        model_choice = st.session_state.get('model_choice', 'Groq (Cloud)')
+        api_key = st.session_state.get('api_key', os.getenv("GROQ_API_KEY"))
 
     st.markdown("---")
 
-    # Mode Selection
+    # ─── Mode Selection ───────────────────────────────────────────────────────
     st.markdown("<h2 style='text-align:center;'>Select Mode</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align:center; color:gray;'>Who are you?</p>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -207,7 +213,7 @@ if st.session_state['mode'] is None:
             st.rerun()
 
 else:
-    # Get saved settings
+    # ─── Get Saved Settings ───────────────────────────────────────────────────
     model_choice = st.session_state.get('model_choice', 'Groq (Cloud)')
     api_key = st.session_state.get('api_key', os.getenv("GROQ_API_KEY"))
 
@@ -221,7 +227,7 @@ else:
 
     st.markdown("---")
 
-    # Show selected mode
+    # ─── Show Selected Mode ───────────────────────────────────────────────────
     if st.session_state['mode'] == 'hr':
         show_hr_mode(api_key, model_choice)
     elif st.session_state['mode'] == 'candidate':
