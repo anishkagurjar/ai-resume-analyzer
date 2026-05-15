@@ -56,21 +56,14 @@ st.markdown("""
         box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         border: 2px solid #f0f0f0;
         text-align: center;
-        cursor: pointer;
         transition: all 0.3s ease;
     }
-    .mode-card:hover {
-        border-color: #667eea;
-        box-shadow: 0 8px 30px rgba(102,126,234,0.2);
-        transform: translateY(-3px);
-    }
-    .card {
-        background: white;
-        border-radius: 12px;
+    .api-box {
+        background: #f8f9ff;
+        border-radius: 15px;
         padding: 1.5rem;
-        box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-        border: 1px solid #f0f0f0;
-        margin-bottom: 1rem;
+        border: 2px solid #667eea;
+        margin-bottom: 2rem;
     }
     .stButton>button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -116,65 +109,9 @@ st.markdown("""
     }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    [data-testid="stSidebar"] {display: none;}
     </style>
 """, unsafe_allow_html=True)
-
-# ─── Sidebar ──────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("""
-        <div style='text-align: center; padding: 1rem 0;'>
-            <h2 style='color: #667eea;'>⚙️ Settings</h2>
-        </div>
-    """, unsafe_allow_html=True)
-    st.markdown("---")
-
-    model_choice = st.radio(
-        "🤖 Select AI Model:",
-        ["Ollama (Local)", "Groq (Cloud)"]
-    )
-
-    st.markdown("---")
-
-    api_key = None
-    if model_choice == "Groq (Cloud)":
-        st.markdown("""
-            <div style='background: #f0f4ff; padding: 1rem;
-            border-radius: 10px; margin-bottom: 1rem;'>
-                <b>🔑 Get Free Groq API Key:</b><br>
-                1. Go to console.groq.com<br>
-                2. Sign up with Google<br>
-                3. Create API Key<br>
-                4. Paste below 👇
-            </div>
-        """, unsafe_allow_html=True)
-
-        api_key = st.text_input(
-            "Enter Groq API Key:",
-            type="password",
-            placeholder="gsk_xxxxxxxxxxxxxxxx"
-        )
-
-        if not api_key:
-            api_key = os.getenv("GROQ_API_KEY")
-
-        if api_key:
-            st.success("✅ API Key Ready!")
-        else:
-            st.warning("⚠️ Enter API Key to use Groq")
-
-    st.markdown("---")
-
-    if model_choice == "Ollama (Local)":
-        st.warning("⚡ Ollama is slow. Switch to Groq!")
-    else:
-        st.success("🚀 Groq AI — Fast & Powerful!")
-
-    st.markdown("---")
-    st.markdown("""
-        <div style='text-align: center; color: gray; font-size: 0.8rem;'>
-            Made with ❤️ using Streamlit & Groq
-        </div>
-    """, unsafe_allow_html=True)
 
 # ─── Header ───────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -184,12 +121,57 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ─── Mode Selection ───────────────────────────────────────────────────────────
+# ─── AI Settings on Main Page ─────────────────────────────────────────────────
 if 'mode' not in st.session_state:
     st.session_state['mode'] = None
 
 if st.session_state['mode'] is None:
 
+    # Model + API Key
+    st.markdown("""
+        <div class='api-box'>
+            <h3 style='color:#667eea; margin:0 0 1rem 0;'>⚙️ AI Settings</h3>
+        </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        model_choice = st.radio(
+            "🤖 Select AI Model:",
+            ["Ollama (Local)", "Groq (Cloud)"],
+            horizontal=True
+        )
+
+    with col2:
+        api_key = None
+        if model_choice == "Groq (Cloud)":
+            api_key = st.text_input(
+                "🔑 Enter Groq API Key:",
+                type="password",
+                placeholder="gsk_xxxxxxxxxxxxxxxx"
+            )
+            if not api_key:
+                api_key = os.getenv("GROQ_API_KEY")
+            if api_key:
+                st.success("✅ API Key Ready!")
+            else:
+                st.markdown("""
+                    <small>Get free key at
+                    <a href='https://console.groq.com' target='_blank'>console.groq.com</a>
+                    </small>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("⚡ Ollama runs locally — no API key needed!")
+            api_key = None
+
+    # Save to session
+    st.session_state['model_choice'] = model_choice
+    st.session_state['api_key'] = api_key
+
+    st.markdown("---")
+
+    # Mode Selection
     st.markdown("<h2 style='text-align:center;'>Select Mode</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align:center; color:gray;'>Who are you?</p>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -225,17 +207,22 @@ if st.session_state['mode'] is None:
             st.rerun()
 
 else:
+    # Get saved settings
+    model_choice = st.session_state.get('model_choice', 'Groq (Cloud)')
+    api_key = st.session_state.get('api_key', os.getenv("GROQ_API_KEY"))
+
     # Back button
-    if st.button("← Back to Home"):
-        st.session_state['mode'] = None
-        st.session_state.clear()
-        st.rerun()
+    col1, col2, col3 = st.columns([1, 4, 1])
+    with col1:
+        if st.button("← Back"):
+            st.session_state['mode'] = None
+            st.session_state.clear()
+            st.rerun()
 
     st.markdown("---")
 
     # Show selected mode
     if st.session_state['mode'] == 'hr':
         show_hr_mode(api_key, model_choice)
-
     elif st.session_state['mode'] == 'candidate':
         show_candidate_mode(api_key, model_choice)
