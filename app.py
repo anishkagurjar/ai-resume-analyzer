@@ -1,4 +1,3 @@
-
 import streamlit as st
 import os
 import re
@@ -12,9 +11,6 @@ from utils.report_generator import (
 )
 from hr_analyzer import show_hr_mode
 from candidate_mode import show_candidate_mode
-from dotenv import load_dotenv
-
-load_dotenv()
 
 # Page Config
 st.set_page_config(
@@ -38,18 +34,21 @@ st.markdown("""
         margin-bottom: 2rem;
         color: white;
     }
+
     .header-box h1 {
         font-size: 2.5rem;
         font-weight: 700;
         margin: 0;
         color: white;
     }
+
     .header-box p {
         font-size: 1.1rem;
         margin: 0.5rem 0 0 0;
         opacity: 0.9;
         color: white;
     }
+
     .mode-card {
         background: white;
         border-radius: 15px;
@@ -59,6 +58,7 @@ st.markdown("""
         text-align: center;
         transition: all 0.3s ease;
     }
+
     .api-box {
         background: #f8f9ff;
         border-radius: 15px;
@@ -66,6 +66,7 @@ st.markdown("""
         border: 2px solid #667eea;
         margin-bottom: 2rem;
     }
+
     .stButton>button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -77,10 +78,12 @@ st.markdown("""
         width: 100%;
         transition: all 0.3s ease;
     }
+
     .stButton>button:hover {
         transform: translateY(-2px);
         box-shadow: 0 5px 20px rgba(102,126,234,0.4);
     }
+
     .score-high {
         background: linear-gradient(135deg, #11998e, #38ef7d);
         color: white;
@@ -90,6 +93,7 @@ st.markdown("""
         font-size: 1.5rem;
         font-weight: 700;
     }
+
     .score-mid {
         background: linear-gradient(135deg, #f7971e, #ffd200);
         color: white;
@@ -99,6 +103,7 @@ st.markdown("""
         font-size: 1.5rem;
         font-weight: 700;
     }
+
     .score-low {
         background: linear-gradient(135deg, #cb2d3e, #ef473a);
         color: white;
@@ -108,13 +113,14 @@ st.markdown("""
         font-size: 1.5rem;
         font-weight: 700;
     }
+
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     [data-testid="stSidebar"] {display: none;}
     </style>
 """, unsafe_allow_html=True)
 
-# ─── Header ───────────────────────────────────────────────────────────────────
+# Header
 st.markdown("""
     <div class='header-box'>
         <h1>📄 AI Resume Analyzer</h1>
@@ -122,12 +128,15 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+# Get API Key from Streamlit Secrets
+groq_api_key = st.secrets["GROQ_API_KEY"]
+
 if 'mode' not in st.session_state:
     st.session_state['mode'] = None
 
 if st.session_state['mode'] is None:
 
-    # ─── AI Settings Toggle ───────────────────────────────────────────────────
+    # AI Settings Toggle
     show_settings = st.toggle("⚙️ AI Settings", value=False)
 
     if show_settings:
@@ -148,22 +157,15 @@ if st.session_state['mode'] is None:
 
         with col2:
             api_key = None
+
             if model_choice == "Groq (Cloud)":
-                api_key = st.text_input(
-                    "🔑 Enter Groq API Key:",
-                    type="password",
-                    placeholder="gsk_xxxxxxxxxxxxxxxx"
-                )
-                if not api_key:
-                    api_key = os.getenv("GROQ_API_KEY")
+                api_key = groq_api_key
+
                 if api_key:
-                    st.success("✅ API Key Ready!")
+                    st.success("✅ API Key Loaded from Streamlit Secrets!")
                 else:
-                    st.markdown("""
-                        <small>Get free key at
-                        <a href='https://console.groq.com' target='_blank'>
-                        console.groq.com</a></small>
-                    """, unsafe_allow_html=True)
+                    st.error("❌ API Key not found in Streamlit Secrets")
+
             else:
                 st.info("⚡ Ollama runs locally — no API key needed!")
                 api_key = None
@@ -173,11 +175,11 @@ if st.session_state['mode'] is None:
 
     else:
         model_choice = st.session_state.get('model_choice', 'Groq (Cloud)')
-        api_key = st.session_state.get('api_key', os.getenv("GROQ_API_KEY"))
+        api_key = st.session_state.get('api_key', groq_api_key)
 
     st.markdown("---")
 
-    # ─── Mode Selection ───────────────────────────────────────────────────────
+    # Mode Selection
     st.markdown("<h2 style='text-align:center;'>Select Mode</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align:center; color:gray;'>Who are you?</p>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -189,11 +191,15 @@ if st.session_state['mode'] is None:
             <div class='mode-card'>
                 <h1>👔</h1>
                 <h2 style='color:#1a1a2e;'>HR Mode</h2>
-                <p style='color:gray;'>Upload multiple resumes, compare candidates,
-                get rankings & SWOT analysis, download screening report!</p>
+                <p style='color:gray;'>
+                Upload multiple resumes, compare candidates,
+                get rankings & SWOT analysis, download screening report!
+                </p>
             </div>
         """, unsafe_allow_html=True)
+
         st.markdown("<br>", unsafe_allow_html=True)
+
         if st.button("👔 Enter HR Mode", key="hr_btn"):
             st.session_state['mode'] = 'hr'
             st.rerun()
@@ -203,22 +209,29 @@ if st.session_state['mode'] is None:
             <div class='mode-card'>
                 <h1>👤</h1>
                 <h2 style='color:#667eea;'>Candidate Mode</h2>
-                <p style='color:gray;'>Upload your resume, get AI analysis,
-                enhance resume for job description, download professional templates!</p>
+                <p style='color:gray;'>
+                Upload your resume, get AI analysis,
+                enhance resume for job description,
+                download professional templates!
+                </p>
             </div>
         """, unsafe_allow_html=True)
+
         st.markdown("<br>", unsafe_allow_html=True)
+
         if st.button("👤 Enter Candidate Mode", key="candidate_btn"):
             st.session_state['mode'] = 'candidate'
             st.rerun()
 
 else:
-    # ─── Get Saved Settings ───────────────────────────────────────────────────
-    model_choice = st.session_state.get('model_choice', 'Groq (Cloud)')
-    api_key = st.session_state.get('api_key', os.getenv("GROQ_API_KEY"))
 
-    # Back button
+    # Get Saved Settings
+    model_choice = st.session_state.get('model_choice', 'Groq (Cloud)')
+    api_key = st.session_state.get('api_key', groq_api_key)
+
+    # Back Button
     col1, col2, col3 = st.columns([1, 4, 1])
+
     with col1:
         if st.button("← Back"):
             st.session_state['mode'] = None
@@ -227,8 +240,9 @@ else:
 
     st.markdown("---")
 
-    # ─── Show Selected Mode ───────────────────────────────────────────────────
+    # Show Selected Mode
     if st.session_state['mode'] == 'hr':
         show_hr_mode(api_key, model_choice)
+
     elif st.session_state['mode'] == 'candidate':
         show_candidate_mode(api_key, model_choice)
