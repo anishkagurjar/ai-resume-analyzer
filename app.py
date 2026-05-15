@@ -22,6 +22,10 @@ st.set_page_config(
     layout="wide"
 )
 
+# DARK MODE TOGGLE
+
+dark_mode = st.toggle("🌙 Dark Mode")
+
 # CUSTOM CSS
 
 st.markdown("""
@@ -35,7 +39,7 @@ st.markdown("""
 
 .main{
     padding:1rem 2rem;
-    background:#f5f7fb;
+    background: linear-gradient(135deg,#EEF2FF,#F8FAFC);
 }
 
 /* TOPBAR */
@@ -80,18 +84,36 @@ st.markdown("""
 /* HERO SECTION */
 
 .hero-section{
+
     text-align:center;
-    padding:70px 30px;
-    background:white;
-    border-radius:25px;
-    margin-bottom:40px;
-    box-shadow:0 8px 24px rgba(0,0,0,0.05);
+
+    padding:90px 40px;
+
+    background: rgba(255,255,255,0.7);
+
+    backdrop-filter: blur(12px);
+
+    border-radius:30px;
+
+    margin-bottom:50px;
+
+    box-shadow:0 8px 32px rgba(31,38,135,0.08);
+
+    border:1px solid rgba(255,255,255,0.3);
 }
 
 .hero-section h1{
-    font-size:54px;
+
+    font-size:62px;
+
     font-weight:800;
-    color:#3B3FEF;
+
+    background: linear-gradient(90deg,#3B82F6,#7C3AED);
+
+    -webkit-background-clip:text;
+
+    -webkit-text-fill-color:transparent;
+
     margin-bottom:20px;
 }
 
@@ -106,19 +128,32 @@ st.markdown("""
 /* MODE CARDS */
 
 .mode-card{
-    background:white;
+
+    background: rgba(255,255,255,0.6);
+
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
     border-radius:24px;
+
     padding:35px;
-    border:1px solid #E5E7EB;
+
+    border:1px solid rgba(255,255,255,0.3);
+
     transition:0.3s ease;
-    box-shadow:0 8px 24px rgba(0,0,0,0.05);
+
+    box-shadow:0 8px 32px rgba(31,38,135,0.12);
+
     text-align:center;
+
     height:100%;
 }
 
 .mode-card:hover{
-    transform:translateY(-8px);
-    box-shadow:0 18px 40px rgba(59,130,246,0.15);
+
+    transform:translateY(-10px);
+
+    box-shadow:0 20px 50px rgba(59,130,246,0.25);
 }
 
 .mode-card h1{
@@ -399,7 +434,7 @@ if st.session_state['mode'] is None:
             st.session_state['mode'] = 'candidate'
             st.rerun()
 
-    # FEATURE SECTION
+    # FEATURES
 
     st.markdown("<br><br><br>", unsafe_allow_html=True)
 
