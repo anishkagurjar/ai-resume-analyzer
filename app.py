@@ -129,7 +129,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Get API Key from Streamlit Secrets
-groq_api_key = st.secrets["GROQ_API_KEY"]
+try:
+    groq_api_key = None
+except Exception:
+    groq_api_key = None
+    st.warning("⚠️ GROQ_API_KEY not found in secrets.toml")
 
 if 'mode' not in st.session_state:
     st.session_state['mode'] = None
@@ -175,7 +179,7 @@ if st.session_state['mode'] is None:
 
     else:
         model_choice = st.session_state.get('model_choice', 'Groq (Cloud)')
-        api_key = st.session_state.get('api_key', groq_api_key)
+        api_key = st.session_state.get('api_key') or groq_api_key
 
     st.markdown("---")
 
