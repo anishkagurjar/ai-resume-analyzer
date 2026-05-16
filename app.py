@@ -1,252 +1,316 @@
 import streamlit as st
 import os
-import re
-from utils.parser import extract_text_from_pdf
-from utils.analyzer import analyze_resume
-from utils.report_generator import (
-    generate_modern_template,
-    generate_creative_template,
-    generate_minimal_template,
-    extract_resume_data
-)
+from dotenv import load_dotenv
 from hr_analyzer import show_hr_mode
 from candidate_mode import show_candidate_mode
 
-# Page Config
+load_dotenv()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+
 st.set_page_config(
     page_title="AI Resume Analyzer",
     page_icon="📄",
     layout="wide"
 )
 
-# Custom CSS
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    * { font-family: 'Inter', sans-serif; }
-    .main { padding: 0rem; }
-
-    .header-box {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 2.5rem;
-        border-radius: 15px;
-        text-align: center;
-        margin-bottom: 2rem;
-        color: white;
-    }
-
-    .header-box h1 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin: 0;
-        color: white;
-    }
-
-    .header-box p {
-        font-size: 1.1rem;
-        margin: 0.5rem 0 0 0;
-        opacity: 0.9;
-        color: white;
-    }
-
-    .mode-card {
-        background: white;
-        border-radius: 15px;
-        padding: 2rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        border: 2px solid #f0f0f0;
-        text-align: center;
-        transition: all 0.3s ease;
-    }
-
-    .api-box {
-        background: #f8f9ff;
-        border-radius: 15px;
-        padding: 1.5rem;
-        border: 2px solid #667eea;
-        margin-bottom: 2rem;
-    }
-
-    .stButton>button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 0.7rem 2rem;
-        border-radius: 25px;
-        border: none;
-        font-size: 16px;
-        font-weight: 600;
-        width: 100%;
-        transition: all 0.3s ease;
-    }
-
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 20px rgba(102,126,234,0.4);
-    }
-
-    .score-high {
-        background: linear-gradient(135deg, #11998e, #38ef7d);
-        color: white;
-        padding: 1rem 2rem;
-        border-radius: 50px;
-        text-align: center;
-        font-size: 1.5rem;
-        font-weight: 700;
-    }
-
-    .score-mid {
-        background: linear-gradient(135deg, #f7971e, #ffd200);
-        color: white;
-        padding: 1rem 2rem;
-        border-radius: 50px;
-        text-align: center;
-        font-size: 1.5rem;
-        font-weight: 700;
-    }
-
-    .score-low {
-        background: linear-gradient(135deg, #cb2d3e, #ef473a);
-        color: white;
-        padding: 1rem 2rem;
-        border-radius: 50px;
-        text-align: center;
-        font-size: 1.5rem;
-        font-weight: 700;
-    }
+    * { font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
 
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    header {visibility: hidden;}
     [data-testid="stSidebar"] {display: none;}
+    .block-container { padding: 0 !important; max-width: 100% !important; }
+
+    .navbar {
+        background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+        padding: 1rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0;
+    }
+    .navbar-brand {
+        color: white;
+        font-size: 1.3rem;
+        font-weight: 700;
+    }
+    .navbar-about {
+        color: white;
+        border: 2px solid white;
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    .hero {
+        background: linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%);
+        padding: 3rem 2rem;
+        text-align: center;
+    }
+    .hero h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #4F46E5;
+        margin-bottom: 1rem;
+    }
+    .hero p {
+        font-size: 1.1rem;
+        color: #6B7280;
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+    .mode-section {
+        padding: 2rem 2rem 0 2rem;
+        background: white;
+    }
+    .mode-title {
+        text-align: center;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #1F2937;
+        margin-bottom: 0.5rem;
+    }
+    .mode-underline {
+        width: 60px;
+        height: 4px;
+        background: #4F46E5;
+        margin: 0 auto 2rem auto;
+        border-radius: 2px;
+    }
+    .candidate-card {
+        background: white;
+        border: 2px solid #DBEAFE;
+        border-radius: 15px;
+        padding: 2rem;
+    }
+    .hr-card {
+        background: white;
+        border: 2px solid #D1FAE5;
+        border-radius: 15px;
+        padding: 2rem;
+    }
+    .card-title-blue {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #3B82F6;
+        margin-bottom: 0.8rem;
+    }
+    .card-title-green {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #10B981;
+        margin-bottom: 0.8rem;
+    }
+    .card-desc {
+        color: #6B7280;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+    }
+    .stButton>button {
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        padding: 0.7rem 2rem;
+        width: 100%;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .why-section {
+        background: #F9FAFB;
+        padding: 2.5rem 2rem;
+    }
+    .why-title {
+        text-align: center;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #1F2937;
+        margin-bottom: 0.5rem;
+    }
+    .feature-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: left;
+        border: 1px solid #E5E7EB;
+        height: 100%;
+    }
+    .feature-desc {
+        color: #6B7280;
+        font-size: 0.85rem;
+        line-height: 1.5;
+    }
+    .footer {
+        background: white;
+        text-align: center;
+        padding: 1.5rem;
+        color: #6B7280;
+        font-size: 0.9rem;
+        border-top: 1px solid #E5E7EB;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# Header
-st.markdown("""
-    <div class='header-box'>
-        <h1>📄 AI Resume Analyzer</h1>
-        <p>Smart Resume Screening & Enhancement System</p>
-    </div>
-""", unsafe_allow_html=True)
-
-# Get API Key from Streamlit Secrets
-try:
-    groq_api_key = None
-except Exception:
-    groq_api_key = None
-    st.warning("⚠️ GROQ_API_KEY not found in secrets.toml")
-
+# Session State
 if 'mode' not in st.session_state:
     st.session_state['mode'] = None
+if 'model_choice' not in st.session_state:
+    st.session_state['model_choice'] = 'Groq (Cloud)'
+if 'api_key' not in st.session_state:
+    st.session_state['api_key'] = GROQ_API_KEY
 
+# HOME PAGE
 if st.session_state['mode'] is None:
 
-    # AI Settings Toggle
+    # Navbar
+    st.markdown("""
+        <div class='navbar'>
+            <div class='navbar-brand'>📄 AI Resume Analyzer</div>
+            <div class='navbar-about'>ⓘ About</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Hero
+    st.markdown("""
+        <div class='hero'>
+            <h1>Welcome to AI Resume Analyzer</h1>
+            <p>Your intelligent career assistant that helps you create, analyze,
+            and optimize your resume for better opportunities.</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # AI Settings Toggle — sirf Ollama/Groq switch
+    st.markdown("<div style='padding: 1rem 2rem 0 2rem;'>", unsafe_allow_html=True)
     show_settings = st.toggle("⚙️ AI Settings", value=False)
 
     if show_settings:
-        st.markdown("""
-            <div class='api-box'>
-                <h3 style='color:#667eea; margin:0 0 1rem 0;'>⚙️ Configure AI</h3>
-            </div>
-        """, unsafe_allow_html=True)
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            model_choice = st.radio(
-                "🤖 Select AI Model:",
-                ["Ollama (Local)", "Groq (Cloud)"],
-                horizontal=True
-            )
-
-        with col2:
-            api_key = None
-
-            if model_choice == "Groq (Cloud)":
-                api_key = groq_api_key
-
-                if api_key:
-                    st.success("✅ API Key Loaded from Streamlit Secrets!")
-                else:
-                    st.error("❌ API Key not found in Streamlit Secrets")
-
-            else:
-                st.info("⚡ Ollama runs locally — no API key needed!")
-                api_key = None
-
+        model_choice = st.radio(
+            "🤖 Select AI Model:",
+            ["Groq (Cloud)", "Ollama (Local)"],
+            horizontal=True
+        )
         st.session_state['model_choice'] = model_choice
-        st.session_state['api_key'] = api_key
 
-    else:
-        model_choice = st.session_state.get('model_choice', 'Groq (Cloud)')
-        api_key = st.session_state.get('api_key') or groq_api_key
+        if model_choice == "Groq (Cloud)":
+            st.session_state['api_key'] = GROQ_API_KEY
+            st.success("✅ Groq AI Ready!")
+        else:
+            st.session_state['api_key'] = None
+            st.info("⚡ Ollama runs locally — no API key needed!")
 
-    st.markdown("---")
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # Mode Selection
-    st.markdown("<h2 style='text-align:center;'>Select Mode</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:gray;'>Who are you?</p>", unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("""
+        <div class='mode-section'>
+            <div class='mode-title'>Choose Your Mode</div>
+            <div class='mode-underline'></div>
+        </div>
+    """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 0.2, 1])
+    col1, col2 = st.columns(2)
 
     with col1:
         st.markdown("""
-            <div class='mode-card'>
-                <h1>👔</h1>
-                <h2 style='color:#1a1a2e;'>HR Mode</h2>
-                <p style='color:gray;'>
-                Upload multiple resumes, compare candidates,
-                get rankings & SWOT analysis, download screening report!
-                </p>
+            <div class='candidate-card'>
+                <div style='font-size:2.5rem;'>👤</div>
+                <div class='card-title-blue'>Candidate Mode</div>
+                <div class='card-desc'>Upload your resume and get AI-powered
+                analysis, suggestions, and improvement recommendations.</div>
             </div>
         """, unsafe_allow_html=True)
-
         st.markdown("<br>", unsafe_allow_html=True)
-
-        if st.button("👔 Enter HR Mode", key="hr_btn"):
-            st.session_state['mode'] = 'hr'
-            st.rerun()
-
-    with col3:
-        st.markdown("""
-            <div class='mode-card'>
-                <h1>👤</h1>
-                <h2 style='color:#667eea;'>Candidate Mode</h2>
-                <p style='color:gray;'>
-                Upload your resume, get AI analysis,
-                enhance resume for job description,
-                download professional templates!
-                </p>
-            </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        if st.button("👤 Enter Candidate Mode", key="candidate_btn"):
+        if st.button("👤 Enter Candidate Mode →", key="candidate_btn"):
             st.session_state['mode'] = 'candidate'
             st.rerun()
 
+    with col2:
+        st.markdown("""
+            <div class='hr-card'>
+                <div style='font-size:2.5rem;'>👔</div>
+                <div class='card-title-green'>HR Mode</div>
+                <div class='card-desc'>Analyze multiple resumes, compare candidates,
+                and get insights to make better hiring decisions.</div>
+            </div>
+        """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("👔 Enter HR Mode →", key="hr_btn"):
+            st.session_state['mode'] = 'hr'
+            st.rerun()
+
+    # Why Choose Section
+    st.markdown("""
+        <div class='why-section'>
+            <div class='why-title'>Why Choose AI Resume Analyzer?</div>
+            <div class='mode-underline'></div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    f1, f2, f3, f4 = st.columns(4)
+    with f1:
+        st.markdown("""
+            <div class='feature-card'>
+                <div style='font-size:2rem; color:#7C3AED;'>🧠</div>
+                <div style='font-weight:700; color:#7C3AED; margin:0.5rem 0;'>AI-Powered Analysis</div>
+                <div class='feature-desc'>Advanced AI analyzes your resume and provides detailed insights.</div>
+            </div>
+        """, unsafe_allow_html=True)
+    with f2:
+        st.markdown("""
+            <div class='feature-card'>
+                <div style='font-size:2rem; color:#10B981;'>🛡️</div>
+                <div style='font-weight:700; color:#10B981; margin:0.5rem 0;'>ATS Compatibility</div>
+                <div class='feature-desc'>Check your resume's ATS score and compatibility.</div>
+            </div>
+        """, unsafe_allow_html=True)
+    with f3:
+        st.markdown("""
+            <div class='feature-card'>
+                <div style='font-size:2rem; color:#F59E0B;'>💡</div>
+                <div style='font-weight:700; color:#F59E0B; margin:0.5rem 0;'>Smart Suggestions</div>
+                <div class='feature-desc'>Get personalized suggestions to improve your resume.</div>
+            </div>
+        """, unsafe_allow_html=True)
+    with f4:
+        st.markdown("""
+            <div class='feature-card'>
+                <div style='font-size:2rem; color:#3B82F6;'>📄</div>
+                <div style='font-weight:700; color:#3B82F6; margin:0.5rem 0;'>Multiple Templates</div>
+                <div class='feature-desc'>Choose from professional templates to create a perfect resume.</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # Footer
+    st.markdown("""
+        <div class='footer'>
+            © 2025 AI Resume Analyzer | All rights reserved 💜
+        </div>
+    """, unsafe_allow_html=True)
+
+# MODE PAGES
 else:
+    st.markdown("""
+        <div class='navbar'>
+            <div class='navbar-brand'>📄 AI Resume Analyzer</div>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # Get Saved Settings
-    model_choice = st.session_state.get('model_choice', 'Groq (Cloud)')
-    api_key = st.session_state.get('api_key', groq_api_key)
-
-    # Back Button
-    col1, col2, col3 = st.columns([1, 4, 1])
-
+    col1, col2, col3 = st.columns([1, 6, 1])
     with col1:
         if st.button("← Back"):
             st.session_state['mode'] = None
-            st.session_state.clear()
             st.rerun()
 
     st.markdown("---")
 
-    # Show Selected Mode
+    model_choice = st.session_state.get('model_choice', 'Groq (Cloud)')
+    api_key = st.session_state.get('api_key') or GROQ_API_KEY
+
     if st.session_state['mode'] == 'hr':
         show_hr_mode(api_key, model_choice)
-
     elif st.session_state['mode'] == 'candidate':
         show_candidate_mode(api_key, model_choice)
